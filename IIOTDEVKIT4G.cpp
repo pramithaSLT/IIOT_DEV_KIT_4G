@@ -172,17 +172,14 @@ bool IIOTDEVKIT4G ::MQTT_DISCONNECT(Broker *broker, uint timeout)
   else{
     atCommand1 ="AT+CMQTTDISC="+String(broker->mqttId)+","+timeout+"\r\n";
   }
-  
+  String response1 = "+CMQTTDISC: "+String(broker->mqttId)+ ",0";
   char charArray1[atCommand1.length()];
   atCommand1.toCharArray(charArray1, atCommand1.length());
-  uint8_t answer = SENDATCMD(charArray1, 30000, "OK", "ERROR");
+  uint8_t answer = SENDATCMD(charArray1, 30000, response1.c_str(), "ERROR");
   
   if (answer == 1){
-    String atCommand2 ="AT+CMQTTREL="+String(broker->mqttId)+"\r\n";
-    char charArray2[atCommand2.length()];
-    atCommand2.toCharArray(charArray2, atCommand2.length());
-
-    answer = SENDATCMD(charArray2, 30000, "OK", "ERROR");
+    Serial.println("CMQTTDISC ok");
+    answer = MQTT_RELESECLIENT(broker);
     if(answer==1){
       return true;
     }
@@ -207,15 +204,11 @@ bool IIOTDEVKIT4G::MQTT_CONNECT(Broker *broker, String clientid, String Username
   char charArray[atCommand.length()];
   atCommand.toCharArray(charArray, atCommand.length());
  
-  String response1;
-  bool answer1 = SEND_AT_CMD_RAW(charArray, 60000, &response1);
+  //String response1;
+  //bool answer1 = SEND_AT_CMD_RAW(charArray, 60000, &response1);
+  uint8_t answer1 = SENDATCMD(charArray, 40000,"OK", "+ERROR");
   //Serial.println(response1);
-  if (answer1==false){
-   // Serial.println("Acquire a client Error");
-    MQTT_RELESECLIENT(broker);
-    return false;
-  }
-  if((response1[0]=='O') && (response1[1]=='K')){
+  if(answer1==1){
     
     /***Connect to MQTT Server***/
     String atCommand2;
@@ -236,20 +229,17 @@ bool IIOTDEVKIT4G::MQTT_CONNECT(Broker *broker, String clientid, String Username
     atCommand2.toCharArray(charArray2, atCommand2.length());
     
 
-    String response;
-    bool answer2 = SEND_AT_CMD_RAW(charArray2, 60000, &response);
-    Serial.println("AT+CMQTTCONNECT: -");
-    Serial.println(response);
-    if (answer2)
+    String ext_response2 = "+CMQTTCONNECT: "+String(broker->mqttId)+",0";
+    
+    //bool answer2 = SEND_AT_CMD_RAW(charArray2, 60000, &response);
+    //Serial.println("AT+CMQTTCONNECT: -");
+    //Serial.println(response);
+
+    uint8_t answer2 = SENDATCMD(charArray2, 40000, ext_response2.c_str() , "+ERROR");
+    if (answer2==1)
     {
-      if((response[0]=='O') && (response[1]=='K')){
         Serial.println("Acquire a client");
         return true;
-      }else{
-        //MQTT_DISCONNECT(broker,0);
-        MQTT_RELESECLIENT(broker);
-        return false;
-      }
     }
     else
     {
@@ -259,7 +249,7 @@ bool IIOTDEVKIT4G::MQTT_CONNECT(Broker *broker, String clientid, String Username
 
   }else{
     Serial.println("Acquire a client Error");
-    MQTT_RELESECLIENT(broker);
+    //MQTT_RELESECLIENT(broker);
     return false;
   }
  
