@@ -128,7 +128,7 @@ bool IIOTDEVKIT4G ::MQTT_SETUP(Broker *broker, String server, String port)
   broker->port = port;
 
   String response;
-  uint8_t answer = SEND_AT_CMD_RAW("AT+CMQTTSTART\r\n", 2000,  &response);
+  uint8_t answer = SEND_AT_CMD_RAW("AT+CMQTTSTART\r\n", 30000,  &response);
   if (answer){
     if((response[0]=='O') && (response[1]=='K')){
       //Serial.println("success");
@@ -146,7 +146,8 @@ bool IIOTDEVKIT4G ::MQTT_SETUP(Broker *broker, String server, String port)
 
 bool IIOTDEVKIT4G ::MQTT_STOP()
 {
-  uint8_t answer = SENDATCMD("AT+CMQTTSTOP\r\n", 2000, "OK", "ERROR");
+  uint8_t answer = SENDATCMD("AT+CMQTTSTOP\r\n", 30000, "OK", "ERROR");
+
 
   if (answer == 1){
     //Serial.println("MQTT STOP");
@@ -174,14 +175,14 @@ bool IIOTDEVKIT4G ::MQTT_DISCONNECT(Broker *broker, uint timeout)
   
   char charArray1[atCommand1.length()];
   atCommand1.toCharArray(charArray1, atCommand1.length());
-  uint8_t answer = SENDATCMD(charArray1, 2000, "OK", "ERROR");
+  uint8_t answer = SENDATCMD(charArray1, 30000, "OK", "ERROR");
   
   if (answer == 1){
     String atCommand2 ="AT+CMQTTREL="+String(broker->mqttId)+"\r\n";
     char charArray2[atCommand2.length()];
     atCommand2.toCharArray(charArray2, atCommand2.length());
 
-    answer = SENDATCMD(charArray2, 2000, "OK", "ERROR");
+    answer = SENDATCMD(charArray2, 30000, "OK", "ERROR");
     if(answer==1){
       return true;
     }
@@ -207,14 +208,15 @@ bool IIOTDEVKIT4G::MQTT_CONNECT(Broker *broker, String clientid, String Username
   atCommand.toCharArray(charArray, atCommand.length());
  
   String response1;
-  bool answer1 = SEND_AT_CMD_RAW(charArray, 30000, &response1);
- // Serial.println(response1);
+  bool answer1 = SEND_AT_CMD_RAW(charArray, 60000, &response1);
+  //Serial.println(response1);
   if (answer1==false){
-    //Serial.println("Acquire a client Error");
+   // Serial.println("Acquire a client Error");
+    MQTT_RELESECLIENT(broker);
     return false;
   }
   if((response1[0]=='O') && (response1[1]=='K')){
-
+    
     /***Connect to MQTT Server***/
     String atCommand2;
     if(Username==NULL){
@@ -235,25 +237,44 @@ bool IIOTDEVKIT4G::MQTT_CONNECT(Broker *broker, String clientid, String Username
     
 
     String response;
-    bool answer2 = SEND_AT_CMD_RAW(charArray2, 30000, &response);
-    //Serial.println(response);
+    bool answer2 = SEND_AT_CMD_RAW(charArray2, 60000, &response);
+    Serial.println("AT+CMQTTCONNECT: -");
+    Serial.println(response);
     if (answer2)
     {
       if((response[0]=='O') && (response[1]=='K')){
+        Serial.println("Acquire a client");
         return true;
       }else{
+        //MQTT_DISCONNECT(broker,0);
+        MQTT_RELESECLIENT(broker);
         return false;
       }
     }
     else
     {
+      MQTT_RELESECLIENT(broker);
       return false;
     }
 
   }else{
+    Serial.println("Acquire a client Error");
+    MQTT_RELESECLIENT(broker);
     return false;
   }
  
+}
+
+bool  IIOTDEVKIT4G::MQTT_RELESECLIENT(Broker *broker){
+ 
+  String atCommandrel ="AT+CMQTTREL="+String(broker->mqttId)+"\r\n";
+  char charArrayrel[atCommandrel.length()];
+  atCommandrel.toCharArray(charArrayrel, atCommandrel.length());
+  uint8_t answer = SENDATCMD(charArrayrel, 20000, "OK", "ERROR");
+  if(answer==1){
+    return true;
+  }
+  return false;
 }
 
 bool IIOTDEVKIT4G::MQTT_CONNECT(Broker *broker, String clientid){
@@ -442,56 +463,73 @@ bool IIOTDEVKIT4G::SEND_AT_CMD_RAW(char *at_command, unsigned int timeout, Strin
   Serial2.write(at_command); // Send the AT command
 
   // delay(00);
-  previous = millis();
+  bool IS_CGEV=false;
+  do{
+    previous = millis();
+    x=0;
+    IS_CGEV=false;
 
-  do
-  {
-    if (Serial2.available())
+    do
     {
-      char tem1 = Serial2.read();
-      if (tem1 = '\r')
+      if (Serial2.available())
       {
-        char tem2 = Serial2.read();
-        if (tem1 = '\n')
+        char tem1 = Serial2.read();
+        if (tem1 = '\r')
         {
-          buffer_start = true;
+          char tem2 = Serial2.read();
+          if (tem1 = '\n')
+          {
+            buffer_start = true;
+          }
         }
       }
+      delay(10);
+    } while (!buffer_start && ((millis() - previous) < timeout));
+    if (!buffer_start)
+    {
+      return false;
     }
-    delay(10);
-  } while (!buffer_start && ((millis() - previous) < timeout));
-  if (!buffer_start)
-  {
-    return false;
-  }
 
-  do
-  {
-    if (Serial2.available())
+    do
     {
-      response[x] = Serial2.read();
-      x++;
-    }
-  
-    if (x > 1)
-    {
-      char tempArray[2] = {0};
-      tempArray[0] = response[x-2];
-      tempArray[1] = response[x-1];
-      if (strstr(tempArray, "\r\n") != NULL)
+      if (Serial2.available())
       {
-        buffer_end = true;
+        response[x] = Serial2.read();
+        x++;
       }
+    
+      if (x > 1)
+      {
+        char tempArray[2] = {0};
+        tempArray[0] = response[x-2];
+        tempArray[1] = response[x-1];
+        if (strstr(tempArray, "\r\n") != NULL)
+        {
+          buffer_end = true;
+        }
+      }
+    } while (!buffer_end && ((millis() - previous) < timeout));
+    if (!buffer_end)
+    {
+      return false;
     }
-  } while (!buffer_end && ((millis() - previous) < timeout));
-  if (!buffer_end)
-  {
-    return false;
-  }
+
+    /*+CGEV check*/
+    if((response[0]=='+')&&(response[1]=='C')&&(response[2]=='G')&&(response[1]=='E')){
+      Serial.println("detect +CGEV CMD");
+      IS_CGEV = true;
+    }
+  }while(IS_CGEV);
 
   char tempStr[100] = {0};
+  uint pointer=0;
   for(uint8_t i = 0; i < x - 2; i++) {
-    tempStr[i] = response[i];
+    if(response[i]==NULL || response[i]=='\r' || response[i]=='\n'){
+      Serial.println("null, newline detected");
+    }else{
+      tempStr[pointer]=response[i];
+      pointer++;
+    }
   }
   *resp = String(tempStr);
   return true;

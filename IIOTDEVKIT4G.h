@@ -56,6 +56,8 @@ class IIOTDEVKIT4G{
         bool MQTT_CONNECT(Broker *broker, String clientid, String Username);
         bool MQTT_CONNECT(Broker *broker, String clientid, String Username, String password);
 
+        bool MQTT_RELESECLIENT(Broker *broker);
+
         bool MQTT_DISCONNECT(Broker *broker);
         bool MQTT_DISCONNECT(Broker *broker, uint timeout);
 
