@@ -144,11 +144,14 @@ bool IIOTDEVKIT4G ::MQTT_SETUP(Broker *broker, String server, String port)
 
 bool IIOTDEVKIT4G ::MQTT_STOP()
 {
-  uint8_t answer = SENDATCMD("AT+CMQTTSTOP\r\n", 30000, "OK", "ERROR");
+  uint8_t answer = SENDATCMD("AT+CMQTTSTOP\r\n", 30000, "+CMQTTSTOP: 0", "ERROR");
 
 
   if (answer == 1){
     //Serial.println("MQTT STOP");
+    return true;
+  }
+  else if(answer ==2){
     return true;
   }
   else{
