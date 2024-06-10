@@ -127,17 +127,15 @@ bool IIOTDEVKIT4G ::MQTT_SETUP(Broker *broker, String server, String port)
   broker->addr = server;
   broker->port = port;
 
-  String response;
-  uint8_t answer = SEND_AT_CMD_RAW("AT+CMQTTSTART\r\n", 30000,  &response);
-  if (answer){
-    if((response[0]=='O') && (response[1]=='K')){
-      //Serial.println("success");
-      return true;
-    }
-    else{
-      return false;
-    }
-    
+  //String exp_response=;SENDATCMD
+  uint8_t answer = SENDATCMD("AT+CMQTTSTART\r\n", 30000,"+CMQTTSTART: 0" ,"ERROR");
+  if (answer==1){
+    //Serial.println("success");
+    return true;
+  }
+  else if(answer==2){
+    //Serial.println("Start sent again ");
+    return true;
   }
   else{
      return false;
@@ -542,7 +540,7 @@ uint8_t IIOTDEVKIT4G::SENDATCMD(const char* at_command, unsigned int timeout, co
   //Serial.write(at_command); // for debug
   Serial2.write(at_command); // Send the AT command
 
-  delay(1000);
+  delay(500);
 
   previous = millis();
   // this loop waits for the answer
