@@ -79,6 +79,7 @@ class IIOTDEVKIT4G{
         
     private:
         uint8_t SENDATCMD(const char* at_command, unsigned int timeout, const char* expected_answer1, const char* expected_answer2);
+        
         NetStat _NetStat;
         
         //int _pin;    

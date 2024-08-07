@@ -61,7 +61,7 @@ void loop() {
         if(IIOT_Dev_kit.IS_ATTACH()){    // not working need to check 
           Serial.println("attched.");  
         }
-        else{4
+        else{
           Serial.println("attched Error"); 
         }
         break;
