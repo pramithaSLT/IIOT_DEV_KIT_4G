@@ -350,7 +350,7 @@ bool IIOTDEVKIT4G::MQTT_PAYLOAD(Broker *broker, String msg){
           OK = true;
       }
     }
-  }while((OK == false) && ((millis()-previous)<3000));
+  }while((OK == false) && ((millis()-previous)<20000));
   if(OK==false){
     return false;
   }
@@ -589,7 +589,7 @@ uint8_t IIOTDEVKIT4G::SENDATCMD(const char* at_command, unsigned int timeout, co
 
 bool IIOTDEVKIT4G::AT_TEST()
 {
-  uint8_t answer = SENDATCMD("AT\r\n", 2000, "OK", "ERROR");
+  uint8_t answer = SENDATCMD("AT\r\n", 1000, "OK", "ERROR");
   if (answer == 1)
   {
     return true;
